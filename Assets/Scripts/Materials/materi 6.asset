@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0712a3bdeef8e4e4fb86e5d0648eb730, type: 3}
+  m_Name: materi 6
+  m_EditorClassIdentifier: 
+  title: "Bintang 3 \u2014 Norma dalam UUD NRI 1945"
+  content: Norma adalah kaidah atau pedoman yang berisi anjuran maupun larangan.
+    Norma menjabarkan nilai yang abstrak menjadi pedoman yang konkret. Pasal-pasal
+    UUD NRI 1945 memuat norma tentang lembaga negara, warga negara, HAM, pendidikan,
+    dan bidang lainnya.
