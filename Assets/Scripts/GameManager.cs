@@ -21,6 +21,23 @@ public class GameManager : MonoBehaviour
     public int requiredMaterials = 3;
     public List<QuizQuestion> questions = new List<QuizQuestion>();
 
+    [Header("Scene Names")]
+    public string mainMenuSceneName = "Main Menu";
+    public string[] stageSceneNames =
+    {
+        "Stage 1",
+        "Stage 2",
+        "Stage 3"
+    };
+
+    [Header("Audio")]
+    public AudioClip stageBGM;
+    public AudioClip materialSFX;
+    public AudioClip quizSFX;
+    public AudioClip correctAnswerSFX;
+    public AudioClip wrongAnswerSFX;
+    public AudioClip winSFX;
+
     [Header("Panels")]
     public MaterialPanelUI materialUI;
     public GameObject pausePanel;
@@ -48,9 +65,11 @@ public class GameManager : MonoBehaviour
     private int collectedMaterials;
     private int currentQuestion;
     private int correctCount;
+
     private bool quizActive;
     private bool stageFinished;
     private bool answering;
+
     private readonly HashSet<MaterialData> collectedData =
         new HashSet<MaterialData>();
 
@@ -58,12 +77,20 @@ public class GameManager : MonoBehaviour
     {
         Time.timeScale = 1f;
 
-        pausePanel.SetActive(false);
-        quizPanel.SetActive(false);
-        finishPanel.SetActive(false);
+        if (pausePanel != null)
+            pausePanel.SetActive(false);
+
+        if (quizPanel != null)
+            quizPanel.SetActive(false);
+
+        if (finishPanel != null)
+            finishPanel.SetActive(false);
 
         UpdateHUD();
         SetupNextStageButton();
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayMusic(stageBGM);
     }
 
     public void CollectMaterial(MaterialData data)
@@ -76,14 +103,23 @@ public class GameManager : MonoBehaviour
         collectedMaterials++;
         score += 10;
 
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(materialSFX);
+
         Time.timeScale = 0f;
         UpdateHUD();
-        materialUI.Show(data);
+
+        if (materialUI != null)
+            materialUI.Show(data);
+        else
+            Debug.LogWarning("MaterialPanelUI belum di-assign.");
     }
 
     public void ContinueAfterMaterial()
     {
-        materialUI.Hide();
+        if (materialUI != null)
+            materialUI.Hide();
+
         Time.timeScale = 1f;
     }
 
@@ -92,21 +128,47 @@ public class GameManager : MonoBehaviour
         if (quizActive || stageFinished)
             return;
 
-        pausePanel.SetActive(true);
+        if (pausePanel != null)
+            pausePanel.SetActive(true);
+
         Time.timeScale = 0f;
     }
 
     public void ResumeGame()
     {
-        pausePanel.SetActive(false);
+        if (pausePanel != null)
+            pausePanel.SetActive(false);
+
         Time.timeScale = 1f;
     }
 
     public void RestartStage()
     {
         Time.timeScale = 1f;
+
         SceneManager.LoadScene(
-            SceneManager.GetActiveScene().buildIndex);
+            SceneManager.GetActiveScene().name
+        );
+    }
+
+    public void LoadMainMenu()
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(mainMenuSceneName);
+    }
+
+    public void LoadStage(int stageIndex)
+    {
+        if (stageSceneNames == null ||
+            stageIndex < 0 ||
+            stageIndex >= stageSceneNames.Length)
+        {
+            Debug.Log("Index stage tidak valid.");
+            return;
+        }
+
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(stageSceneNames[stageIndex]);
     }
 
     public void StartQuiz()
@@ -120,7 +182,8 @@ public class GameManager : MonoBehaviour
         if (questions.Count != stageNumber)
         {
             Debug.LogError(
-                "Jumlah soal harus sama dengan nomor stage.");
+                "Jumlah soal harus sama dengan nomor stage."
+            );
             return;
         }
 
@@ -128,37 +191,69 @@ public class GameManager : MonoBehaviour
         currentQuestion = 0;
         correctCount = 0;
 
-        pausePanel.SetActive(false);
-        quizPanel.SetActive(true);
+        if (pausePanel != null)
+            pausePanel.SetActive(false);
+
+        if (quizPanel != null)
+            quizPanel.SetActive(true);
+
         Time.timeScale = 0f;
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(quizSFX);
 
         ShowQuestion();
     }
 
     private void ShowQuestion()
     {
+        if (currentQuestion < 0 ||
+            currentQuestion >= questions.Count)
+            return;
+
         answering = true;
-        feedbackText.text = "";
+
+        if (feedbackText != null)
+            feedbackText.text = "";
 
         QuizQuestion q = questions[currentQuestion];
-        questionText.text = q.question;
-        questionCounterText.text =
-            $"Soal {currentQuestion + 1}/{questions.Count}";
+
+        if (questionText != null)
+            questionText.text = q.question;
+
+        if (questionCounterText != null)
+        {
+            questionCounterText.text =
+                $"Soal {currentQuestion + 1}/{questions.Count}";
+        }
 
         for (int i = 0; i < optionButtons.Length; i++)
         {
-            bool valid = i < q.options.Length;
+            if (optionButtons[i] == null)
+                continue;
+
+            bool valid = q.options != null &&
+                         i < q.options.Length;
+
             optionButtons[i].gameObject.SetActive(valid);
             optionButtons[i].interactable = valid;
 
-            if (valid)
+            if (!valid)
+                continue;
+
+            if (optionTexts != null &&
+                i < optionTexts.Length &&
+                optionTexts[i] != null)
             {
                 optionTexts[i].text = q.options[i];
-                int answerIndex = i;
-                optionButtons[i].onClick.RemoveAllListeners();
-                optionButtons[i].onClick.AddListener(
-                    () => AnswerQuestion(answerIndex));
             }
+
+            int answerIndex = i;
+
+            optionButtons[i].onClick.RemoveAllListeners();
+            optionButtons[i].onClick.AddListener(
+                () => AnswerQuestion(answerIndex)
+            );
         }
     }
 
@@ -176,24 +271,37 @@ public class GameManager : MonoBehaviour
         {
             correctCount++;
             score += 100;
-            feedbackText.text = "Benar! +100 poin";
+
+            if (feedbackText != null)
+                feedbackText.text = "Benar! +100 poin";
+
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlaySFX(correctAnswerSFX);
         }
         else
         {
-            feedbackText.text = "Belum tepat.";
+            if (feedbackText != null)
+                feedbackText.text = "Belum tepat.";
+
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlaySFX(wrongAnswerSFX);
         }
 
-        feedbackText.text += "\n" + q.explanation;
+        if (feedbackText != null)
+            feedbackText.text += "\n" + q.explanation;
+
         UpdateHUD();
 
-        // Matikan pilihan sampai pemain menekan Lanjut.
         foreach (Button button in optionButtons)
-            button.interactable = false;
+        {
+            if (button != null)
+                button.interactable = false;
+        }
     }
 
     public void NextQuestion()
     {
-        if (answering)
+        if (answering || !quizActive)
             return;
 
         currentQuestion++;
@@ -212,13 +320,25 @@ public class GameManager : MonoBehaviour
     {
         quizActive = false;
         stageFinished = true;
+        answering = false;
 
-        quizPanel.SetActive(false);
-        finishPanel.SetActive(true);
+        if (quizPanel != null)
+            quizPanel.SetActive(false);
 
-        finalScoreText.text = "Score: " + score;
-        correctCountText.text =
-            $"Jawaban benar: {correctCount}/{questions.Count}";
+        if (finishPanel != null)
+            finishPanel.SetActive(true);
+
+        if (finalScoreText != null)
+            finalScoreText.text = "Score: " + score;
+
+        if (correctCountText != null)
+        {
+            correctCountText.text =
+                $"Jawaban benar: {correctCount}/{questions.Count}";
+        }
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(winSFX);
 
         SetupNextStageButton();
     }
@@ -229,33 +349,27 @@ public class GameManager : MonoBehaviour
             return;
 
         bool hasNext = stageNumber < 3;
+
         nextStageButton.gameObject.SetActive(true);
 
         if (nextStageButtonText != null)
         {
             nextStageButtonText.text = hasNext
                 ? "Stage Berikutnya"
-                : "Selesaikan Game";
+                : "Main Menu";
         }
 
         nextStageButton.onClick.RemoveAllListeners();
 
         if (hasNext)
         {
-            nextStageButton.onClick.AddListener(() =>
-            {
-                Time.timeScale = 1f;
-                SceneManager.LoadScene(
-                    SceneManager.GetActiveScene().buildIndex + 1);
-            });
+            nextStageButton.onClick.AddListener(
+                () => LoadStage(stageNumber)
+            );
         }
         else
         {
-            nextStageButton.onClick.AddListener(() =>
-            {
-                Time.timeScale = 1f;
-                SceneManager.LoadScene(0);
-            });
+            nextStageButton.onClick.AddListener(LoadMainMenu);
         }
     }
 
@@ -265,8 +379,10 @@ public class GameManager : MonoBehaviour
             scoreText.text = "Skor: " + score;
 
         if (starText != null)
+        {
             starText.text =
                 $"Bintang: {collectedMaterials}/{requiredMaterials}";
+        }
     }
 
     public bool AllMaterialsCollected()
