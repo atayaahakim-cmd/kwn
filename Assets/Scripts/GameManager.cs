@@ -336,6 +336,30 @@ public class GameManager : MonoBehaviour
             correctCountText.text =
                 $"Jawaban benar: {correctCount}/{questions.Count}";
         }
+        // Tambahkan setelah stage dinyatakan selesai,
+        // dan sebelum skor akhir ditampilkan.
+
+        // Ambil total skor dari stage sebelumnya
+        int totalScore = PlayerPrefs.GetInt("CurrentRunScore", 0);
+
+        // Tambahkan skor stage yang baru selesai
+        totalScore += score;
+
+        // Simpan total skor perjalanan
+        PlayerPrefs.SetInt("CurrentRunScore", totalScore);
+        PlayerPrefs.Save();
+
+        // Jika Stage 3 selesai, simpan rekor terbaik
+        if (stageNumber >= 3)
+        {
+            int bestScore = PlayerPrefs.GetInt("BestTotalScore", 0);
+
+            if (totalScore > bestScore)
+            {
+                PlayerPrefs.SetInt("BestTotalScore", totalScore);
+                PlayerPrefs.Save();
+            }
+        }
 
         if (AudioManager.Instance != null)
             AudioManager.Instance.PlaySFX(winSFX);

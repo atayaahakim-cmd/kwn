@@ -19,6 +19,11 @@ public class SceneNavigation : MonoBehaviour
     public void PlayGame()
     {
         Time.timeScale = 1f;
+
+        // Mulai perjalanan skor baru
+        PlayerPrefs.SetInt("CurrentRunScore", 0);
+        PlayerPrefs.Save();
+
         SceneManager.LoadScene(firstStageSceneName);
     }
 
